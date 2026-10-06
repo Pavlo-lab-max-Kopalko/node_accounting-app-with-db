@@ -2,9 +2,7 @@
 
 const { sequelize } = require('../db.js');
 
-const User = sequelize.define(
-  // your code goes here
-);
+const User = sequelize.define();
 
 module.exports = {
   User,

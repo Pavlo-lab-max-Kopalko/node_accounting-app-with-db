@@ -38,7 +38,7 @@ function createServer() {
       .then((createdUser) => {
         res.status(201).json(createdUser);
       })
-      .catch((err) => res.status(500).json({ message: err }));
+      .catch((err) => res.status(500).json({ message: err.message }));
   });
 
   app.get('/users/:id', (req, res) => {

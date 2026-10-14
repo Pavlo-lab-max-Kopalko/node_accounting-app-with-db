@@ -29,6 +29,8 @@ function createServer() {
   app.post('/users', (req, res) => {
     const user = req.body.name;
 
+    // console.log(user);
+
     if (user === undefined) {
       res.sendStatus(400);
     }
@@ -36,9 +38,11 @@ function createServer() {
     usersService
       .create(user)
       .then((createdUser) => {
+        // console.log(createdUser);
+
         res.status(201).json(createdUser);
       })
-      .catch((err) => res.status(500).json({ message: err.message }));
+      .catch((err) => res.status(500).json({ message: err }));
   });
 
   app.get('/users/:id', (req, res) => {

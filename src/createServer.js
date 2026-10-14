@@ -71,15 +71,12 @@ function createServer() {
       return;
     }
 
-    const deletedUser = usersService.deleteUserById(userId);
-
-    if (!deletedUser) {
-      res.sendStatus(404);
-
-      return;
-    }
-
-    res.status(204).json(deletedUser[0]);
+    usersService
+      .deleteUserById(userId)
+      .then((someUser) => res.sendStatus(204))
+      .catch(() => {
+        res.sendStatus(404);
+      });
   });
 
   app.patch('/users/:id', (req, res) => {
@@ -92,15 +89,10 @@ function createServer() {
       return;
     }
 
-    const updateUser = usersService.patchItem(userId, name);
-
-    if (!updateUser) {
-      res.status(404).json('Not found');
-
-      return;
-    }
-
-    res.status(200).json(updateUser);
+    usersService
+      .patchItem(userId, name)
+      .then((updatedUser) => res.status(200).json(updatedUser))
+      .catch(() => res.sendStatus(404));
   });
 
   app.get('/expenses', (req, res) => {

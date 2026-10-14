@@ -1,5 +1,5 @@
 const pgk = require('pg');
-const uuidv4 = require('uuid');
+const { v4: uuidv4 } = require('uuid');
 
 const { Client } = pgk;
 
@@ -20,7 +20,7 @@ async function getAll() {
 
   const users = await client.query(sql, []);
 
-  return users.rows[0];
+  return users.rows;
 }
 
 async function create(name) {
@@ -48,15 +48,17 @@ async function getUserById(userId) {
 }
 
 async function deleteUserById(userId) {
-  const user = await client.query('DELETE FROM users WHERE id = $1', [userId]);
+  const user = await getUserById(userId);
 
-  return user.rows[0] || null;
+  await client.query('DELETE FROM users WHERE id = $1', [userId]);
+
+  return user;
 }
 
 async function patchItem(userId, name) {
   const sql = 'UPDATE users SET name = $2 WHERE id = $1 RETURNING *';
 
-  const user = await client.query(sql, [name, userId]);
+  const user = await client.query(sql, [userId, name]);
 
   return user.rows[0] || null;
 }

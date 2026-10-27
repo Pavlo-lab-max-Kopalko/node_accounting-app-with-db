@@ -1,69 +1,42 @@
-const pgk = require('pg');
-const { v4: uuidv4 } = require('uuid');
+const { User } = require('../models/User.model');
 
-const { Client } = pgk;
-
-const client = new Client({
-  host: 'localhost',
-  port: 5700,
-  user: 'postgres',
-  password: 'postgres',
-  database: 'postgres',
-});
-
-client.connect();
+const normalize = ({ id, name }) => {
+  return {
+    id,
+    name,
+  };
+};
 
 async function getAll() {
-  const sql = `
-    SELECT * FROM users
-  `;
+  const result = await User.findAll({
+    order: ['name'],
+  });
 
-  const users = await client.query(sql, []);
-
-  return users.rows;
+  return result;
 }
 
-async function create(name) {
-  const id = uuidv4();
-
-  const sql = `
-    INSERT INTO users (id, name)
-    VALUES ($1, $2)
-    RETURNING *
-  `;
-
-  const users = await client.query(sql, [id, name]);
-
-  return users.rows[0];
+function create(name) {
+  return User.create({ name });
 }
 
 async function getUserById(userId) {
-  const sql = `
-    SELECT * FROM users
-    WHERE id = $1
-  `;
-  const user = await client.query(sql, [userId]);
-
-  return user.rows[0] || null;
+  return User.findByPk(userId);
 }
 
 async function deleteUserById(userId) {
-  const user = await getUserById(userId);
-
-  await client.query('DELETE FROM users WHERE id = $1', [userId]);
-
-  return user;
+  await User.destroy({
+    where: {
+      userId,
+    },
+  });
 }
 
 async function patchItem(userId, name) {
-  const sql = 'UPDATE users SET name = $2 WHERE id = $1 RETURNING *';
-
-  const user = await client.query(sql, [userId, name]);
-
-  return user.rows[0] || null;
+  await User.update({ name }, { where: { userId } });
 }
 
 const usersService = {
+  normalize,
   getAll,
   getUserById,
   create,
@@ -71,4 +44,4 @@ const usersService = {
   deleteUserById,
 };
 
-module.exports = usersService;
+module.exports = { usersService };

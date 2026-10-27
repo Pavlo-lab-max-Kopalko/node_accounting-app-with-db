@@ -2,10 +2,10 @@
 
 'use strict';
 
-import { createServer } from './createServer.js';
+const { createServer } = require('./createServer.js');
 
-createServer().listen(3700, () => {
-  console.log('Server is running on localhost:3700');
+createServer().listen(7080, () => {
+  console.log('Server is running on localhost:7080');
 });
 
 // function cleanUp() {

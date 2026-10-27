@@ -3,11 +3,9 @@
 const express = require('express');
 const cors = require('cors');
 const usersService = require('./services/usersService.js');
-const expensesService = require('./services/expencesService.js');
+const expensesService = require('./services/expensesService.js');
 
 function createServer() {
-  const expenses = [];
-
   const app = express();
 
   app.use(express.json());
@@ -22,8 +20,15 @@ function createServer() {
   app.get('/users', (req, res) => {
     usersService
       .getAll()
-      .then((users) => res.status(200).json(users))
-      .catch(() => res.status(500).json({ message: 'Server error' }));
+      .then((users) => {
+        // res.status(200).json(users.map((user) => usersService.normalize(user)));
+        res.status(200).json(users);
+      })
+      .catch((err) => {
+        console.log(err);
+
+        res.status(500).json({ message: 'Server error' });
+      });
   });
 
   app.post('/users', (req, res) => {
@@ -56,7 +61,9 @@ function createServer() {
 
     usersService
       .getUserById(userId)
-      .then((someUser) => res.status(200).json(someUser))
+      .then((someUser) => {
+        res.status(200).json(usersService.normalize(someUser));
+      })
       .catch(() => {
         res.sendStatus(404);
       });
@@ -95,66 +102,38 @@ function createServer() {
       .catch(() => res.sendStatus(404));
   });
 
-  app.get('/expenses', (req, res) => {
-    let filteredExpenses = expenses;
-    const categories = req.query.categories;
-    const userId = req.query.userId;
+  app.get('/expenses', async (req, res) => {
+    const expenses = await expensesService.getAll(req.query);
 
-    if (userId !== undefined) {
-      filteredExpenses = filteredExpenses.filter((exp) => {
-        return exp.userId === +userId;
-      });
-    }
-
-    if (categories) {
-      filteredExpenses = filteredExpenses.filter((exp) => {
-        return exp.category === categories;
-      });
-    }
-
-    if (req.query.from && req.query.to) {
-      const fromDate = new Date(req.query.from);
-      const toDate = new Date(req.query.to);
-
-      filteredExpenses = filteredExpenses.filter((expense) => {
-        const expenseDate = new Date(expense.spentAt);
-
-        return expenseDate >= fromDate && expenseDate <= toDate;
-      });
-    }
-
-    res.status(200).json(filteredExpenses);
+    res.status(200).json(expenses);
   });
 
-  app.post('/expenses', (req, res) => {
-    const body = req.body;
+  app.post('/expenses', async (req, res) => {
+    const { spentAt, title, amount, userId, category, note } = req.body;
 
-    if (
-      body.spentAt === undefined ||
-      body.title === undefined ||
-      body.amount === undefined ||
-      body.category === undefined ||
-      body.note === undefined ||
-      body.userId === undefined
-    ) {
-      res.sendStatus(400);
-
-      return;
+    if (!spentAt || !title || !amount || !userId) {
+      return res.sendStatus(400);
     }
 
-    const user = expensesService.findUser(body.userId);
-    const newExpense = expensesService.createExpense(body, expenses);
+    const user = await expensesService.findUser(userId);
 
-    if (!newExpense || user === undefined) {
-      res.status(400).json('Not found');
-
-      return;
+    if (!user) {
+      return res.status(400).json({ error: 'User not found' });
     }
 
-    res.status(201).json(newExpense);
+    const expense = await expensesService.createExpense({
+      spentAt,
+      title,
+      amount,
+      userId,
+      category,
+      note,
+    });
+
+    res.status(201).json(expense);
   });
 
-  app.get('/expenses/:id', (req, res) => {
+  app.get('/expenses/:id', async (req, res) => {
     const id = req.params.id;
 
     if (!id) {
@@ -163,7 +142,7 @@ function createServer() {
       return;
     }
 
-    const expense = expensesService.getExpenseById(id, expenses);
+    const expense = await expensesService.getExpenseById(id);
 
     if (!expense) {
       res.status(404).json('Not found');
@@ -174,7 +153,7 @@ function createServer() {
     res.status(200).json(expense);
   });
 
-  app.delete('/expenses/:id', (req, res) => {
+  app.delete('/expenses/:id', async (req, res) => {
     const id = req.params.id;
 
     if (!id) {
@@ -183,7 +162,7 @@ function createServer() {
       return;
     }
 
-    const deletedExpense = expensesService.deleteExpenseById(id, expenses);
+    const deletedExpense = await expensesService.deleteExpenseById(id);
 
     if (!deletedExpense) {
       res.sendStatus(404);
@@ -204,20 +183,15 @@ function createServer() {
       return;
     }
 
-    const updateExpenseIndex = expenses.findIndex((el) => el.id === +id);
-    const patchingExpense = expenses[updateExpenseIndex];
+    const updateExpense = expensesService.getExpenseById(id);
 
-    if (patchingExpense === undefined) {
+    if (updateExpense === undefined) {
       res.status(404).json('Not found');
 
       return;
     }
 
-    const updatedExpense = expensesService.updateExpenseById(
-      id,
-      body,
-      patchingExpense,
-    );
+    const updatedExpense = expensesService.updateExpenseById(id, body);
 
     res.status(200).json(updatedExpense);
   });
